@@ -24,6 +24,12 @@ df = pd.DataFrame(players)
 # Streamlit UI
 st.title("⚽ FPL Player Database")
 
+# Search Bar for Player Name
+search_query = st.text_input("Search for a player (by name):", "")
+
+if search_query:
+    df = df[df["name"].str.contains(search_query, case=False, na=False)]
+
 # Use Session State to Store Filters
 if "selected_team" not in st.session_state:
     st.session_state.selected_team = "All"
@@ -32,11 +38,11 @@ if "selected_position" not in st.session_state:
     st.session_state.selected_position = "All"
 
 # Filter by Team
-teams = ["All"] + sorted(df["team"].unique().tolist())  # Ensure 'All' is first
+teams = ["All"] + sorted(df["team"].astype(str).unique().tolist())
 st.session_state.selected_team = st.selectbox("Filter by Team", teams, index=0)
 
 # Filter by Position
-positions = ["All"] + sorted(df["position"].unique().tolist())  # Ensure 'All' is first
+positions = ["All"] + sorted(df["position"].astype(str).unique().tolist())
 st.session_state.selected_position = st.selectbox(
     "Filter by Position", positions, index=0
 )
@@ -59,6 +65,10 @@ sort_option = [
     "Name (Z_A)",
     "Price (Low to High)",
     "Price (High to Low)",
+    "Total Points (High to Low)",
+    "Goals Scored (High to Low)",
+    "Assists (High to Low)",
+    "Minutes Played (High to Low)"
 ]
 sort_by = st.selectbox("Sort Players by", sort_option)
 
@@ -70,36 +80,30 @@ elif sort_by == "Price (Low to High)":
     filtered_df = filtered_df.sort_values("price", ascending=True)
 elif sort_by == "Price (High to Low)":
     filtered_df = filtered_df.sort_values("price", ascending=False)
+elif sort_by == "Total Points (High to Low)":
+    filtered_df = filtered_df.sort_values("total_points", ascending=False)
+elif sort_by == "Goals Scored (High to Low)":
+    filtered_df = filtered_df.sort_values("goals_scored", ascending=False)
+elif sort_by == "Assists (High to Low)":
+    filtered_df = filtered_df.sort_values("assists", ascending=False)
+elif sort_by == "Minutes Played (High to Low)":
+    filtered_df = filtered_df.sort_values("minutes", ascending=False)
 
 # Display Filtered Data
 st.write("## Players")
-st.dataframe(filtered_df)
+st.dataframe(filtered_df[['name', 'team', 'position', 'price', 'total_points', 'goals_scored', 'assists', 'minutes']])
 
-# Visualize Player price
-st.write("## Player Price Distribution")
+# Visualize Top Scorers
+st.write("## Top Goal Scorers")
 
-# Create a histogram
+# Create a bar chart for top goal scorers
+top_scorers = filtered_df.sort_values("goals_scored", ascending=False).head(10)
+
 fig, ax = plt.subplots()
-sns.histplot(filtered_df["price"], bins=10, kde=True, ax=ax)
-ax.set_xlabel("Price")
-ax.set_ylabel("Number of Players")
-ax.set_title("Player Price Distribution")
+sns.barplot(data=top_scorers, x="goals_scored", y="name", ax=ax)
+ax.set_xlabel("Goals Scored")
+ax.set_ylabel("Player")
+ax.set_title("Top Goal Scorers in FPL")
 
-# Display histogram
+# Display bar chart
 st.pyplot(fig)
-
-# Visualization Team Speding
-st.write("## Team Spending")
-
-# Group by team and sum the price
-team_spending = filtered_df.groupby("team")["price"].sum().reset_index()
-
-# Create a bar chart
-fig2, ax2 = plt.subplots()
-sns.barplot(data=team_spending, x="price", y="team", ax=ax2)
-ax2.set_xlabel("Total Team Spending")
-ax2.set_ylabel("Team")
-ax2.set_title("Team Spending Per Team")
-
-# Display histogram
-st.pyplot(fig2)
