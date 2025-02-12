@@ -1,8 +1,10 @@
 import requests
 import os
-import json
+import schedule
+import time
 from pymongo import MongoClient
 from dotenv import load_dotenv
+
 
 # Load environment variables
 load_dotenv()
@@ -16,37 +18,50 @@ collection = db["players"]
 # Fetch data from the FPL API
 FPL_API_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
 
-# Fetch data from FPL API
-response = requests.get(FPL_API_URL)
-if response.status_code == 200:
-    data = response.json()
+def update_fpl_data():
+    """Fetch latest FPL data and update MongoDB efficiently"""
+    print("🔄 Fetching latest FPL data...")
 
-    # Create a mapping of team IDs to team names
-    teams_data = data["teams"]
-    team_mapping = {team["id"]: team["name"] for team in teams_data}
+    response = requests.get(FPL_API_URL)
+    if response.status_code == 200:
+        data = response.json()
 
-# Create a mapping of position IDs to position names
-    position_mapping = {pos["id"]: pos["singular_name"] for pos in data["element_types"]}
+        # Create mappings for team IDs and position IDs
+        team_mapping = {team["id"]: team["name"] for team in data["teams"]}
+        position_mapping = {pos["id"]: pos["singular_name"] for pos in data["element_types"]}
 
-    # Extract player data and convert team IDs & position IDs to names
-    players = data["elements"]
-    formatted_players = []
-    for player in players:
-        formatted_players.append({
-            "name": f"{player['first_name']} {player['second_name']}",
-            "team": team_mapping.get(player["team"], "Unknown"),  # Convert index to team name
-            "position": position_mapping.get(player["element_type"], "Unknown"),  # Convert index to position
-            "price": player["now_cost"] / 10,  # Price is stored as 10x actual value
-            "total_points": player["total_points"],
-            "goals_scored": player["goals_scored"],
-            "assists": player["assists"],
-            "minutes": player["minutes"]
-        })
+        # Process player data
+        players = data["elements"]
+        for player in players:
+            player_data = {
+                "name": f"{player['first_name']} {player['second_name']}",
+                "team": team_mapping.get(player["team"], "Unknown"),
+                "position": position_mapping.get(player["element_type"], "Unknown"),
+                "price": player["now_cost"] / 10,
+                "total_points": player["total_points"],
+                "goals_scored": player["goals_scored"],
+                "assists": player["assists"],
+                "minutes": player["minutes"]
+            }
 
-    # Clear old data and insert new data
-    collection.delete_many({})
-    collection.insert_many(formatted_players)
+            # Update existing player data instead of deleting all data
+            collection.update_one(
+                {"name": player_data["name"]},  # Find by player name
+                {"$set": player_data},  # Update existing fields
+                upsert=True  # If the player is not in the database, insert them
+            )
 
-    print("✅ Successfully stored FPL data in MongoDB with correct team names & positions!")
-else:
-    print("❌ Failed to fetch FPL data")
+        print("✅ Successfully updated player data in MongoDB!")
+    else:
+        print("❌ Failed to fetch FPL data")
+
+# Schedule the update to run every day at 02:00 AM
+schedule.every().day.at("02:00").do(update_fpl_data)
+
+# Run immediately on script start
+update_fpl_data()
+
+# Keep script running to check the schedule
+while True:
+    schedule.run_pending()
+    time.sleep(60)  # Check every 60 seconds
