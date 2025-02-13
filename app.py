@@ -7,6 +7,7 @@ import numpy as np
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
+# Set page configuration
 st.set_page_config(layout="wide")
 
 # Load environment variables
@@ -26,7 +27,7 @@ df = pd.DataFrame(players)
 st.title("⚽ FPL Player Database")
 
 # Layout: Five columns for filters/search and tables
-col1, col2, col3, col4, col5 = st.columns([10, 30, 10, 10, 10])  # First for filters/search, the rest for tables
+col1, col2, col3 = st.columns([10, 30, 10])  # First for filters/search, the rest for tables
 
 # Left column: Filters and Search
 with col1:
@@ -72,15 +73,11 @@ with col3:
     st.write("### ⚽ Top Goal Scorers")
     st.dataframe(top_scorers[['name', 'goals_scored']], use_container_width=True)
 
-# Column 4: Top Assist Providers (Apply position filter)
-with col4:
     # Filter the Top Assist Providers table based on selected position
     top_assists = filtered_df.nlargest(5, "assists")
     st.write("### 🅰️ Top Assist Providers")
     st.dataframe(top_assists[['name', 'assists']], use_container_width=True)
 
-# Column 5: Most Minutes Played (Apply position filter)
-with col5:
     # Filter the Most Minutes Played table based on selected position
     most_minutes = filtered_df.nlargest(5, "minutes")
     st.write("### ⏳ Most Minutes Played")

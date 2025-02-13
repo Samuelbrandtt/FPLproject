@@ -55,13 +55,3 @@ def update_fpl_data():
     else:
         print("❌ Failed to fetch FPL data")
 
-# Schedule the update to run every day at 02:00 AM
-schedule.every().day.at("02:00").do(update_fpl_data)
-
-# Run immediately on script start
-update_fpl_data()
-
-# Keep script running to check the schedule
-while True:
-    schedule.run_pending()
-    time.sleep(60)  # Check every 60 seconds
