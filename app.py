@@ -11,8 +11,7 @@ from dotenv import load_dotenv
 st.set_page_config(layout="wide")
 
 # Load environment variables
-load_dotenv()
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = st.secrets["MONGO_URI"]
 
 # Connect to MongoDB
 client = MongoClient(MONGO_URI)
